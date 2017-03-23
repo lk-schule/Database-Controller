@@ -43,7 +43,7 @@ function plz_change(plz) {
     xmlhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
             console.log(this);
-            $("#ortname").value = this.responseText;
+            document.querySelector("#ortname").value = this.responseText;
         }
     };
     xmlhttp.open("GET","php/getort.php?plz="+plz,true);

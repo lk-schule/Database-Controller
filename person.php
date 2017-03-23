@@ -20,11 +20,11 @@
 		$verbindung = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_DATENBANK);
 
 		// POST/GET-Variablen überprüfen
-		if (isset($_POST["user_id"])){
-			$user_id = (int) filter_input(INPUT_POST, "user_id", FILTER_VALIDATE_INT);
+		if (!empty($_POST["show"])){
+			$user_id = (int) filter_input(INPUT_POST, "show", FILTER_VALIDATE_INT);
 		}
-		else if (isset($_GET["user_id"])){
-            $user_id = (int) filter_input(INPUT_GET, "user_id", FILTER_VALIDATE_INT);
+		else if (!empty($_GET["show"])){
+            $user_id = (int) filter_input(INPUT_GET, "show", FILTER_VALIDATE_INT);
         }
 		else {
 			$user_id = 1;
@@ -35,7 +35,7 @@
 			die("Verbindung fehlgeschlagen: " . mysqli_connect_error());
 		}
 		if (isset($user_id)){
-			$sql = "SELECT Nachname, Vorname, gdatum, adresse, ort, tab_person.plz FROM tab_person JOIN tab_ort ON tab_person.plz = tab_ort.plz WHERE tab_person.id = " . $user_id;
+			$sql = "SELECT Nachname, Vorname, adresse, ort, tab_person.plz FROM tab_person JOIN tab_ort ON tab_person.plz = tab_ort.plz WHERE tab_person.PersonNr = " . $user_id;
 			$ergebnis = mysqli_query($verbindung, $sql);
 
 			if (mysqli_num_rows($ergebnis) > 0) {
@@ -45,7 +45,7 @@
                     var_dump($_GET);
                     var_dump($row);
 				?>
-				<form class="form-inline center_div" method="post" action="person.php<?php if (isset($_GET["user_id"])){ echo "?user_id=".$_GET["user_id"]; }?>" id="user-form">
+				<form class="form-inline center_div" method="post" action="person.php<?php if (isset($_GET["show"])){ echo "?show=".$_GET["show"]; }?>" id="user-form">
 					<div class="form-group">
 						<label for="vorname">Vorname: </label>
 						<input type="text" class="form-control this-editable" name="vorname" id="vorname" value="<?php echo $row["Vorname"];?>" readonly>
@@ -54,11 +54,6 @@
 					<div class="form-group">
 						<label for="nachname">Nachname: </label>
 						<input type="text" class="form-control this-editable" name="nachname" id="nachname" value="<?php echo $row["Nachname"];?>" readonly>
-					</div>
-					<br>
-					<div class="form-group">
-						<label for="gdate">Geburtsdatum: </label>
-						<input type="date" class="form-control this-editable" name="gdate" id="gdate" value="<?php echo $row["gdatum"];?>" readonly>
 					</div>
 					<br>
 					<div class="form-group">
@@ -72,9 +67,9 @@
 						<input type="text" class="form-control" name="ortname" id="ortname" value="<?php echo $row["ort"]?>" readonly>
 					</div>
                     <?php
-                        if (isset($_POST["user_id"])){
+                        if (isset($_POST["show"])){
                         ?>
-                            <input type="hidden" name="user_id" value="<?php echo $user_id; ?>">
+                            <input type="hidden" name="show" value="<?php echo $user_id; ?>">
                         <?php
                         }
                     ?>
@@ -110,16 +105,16 @@
 					<br><br><br>
 					<div class="row container">
 						<div class="col-sm-1">
-							<form action="person.php" method="post"><input type="hidden" name="user_id" value="1"><input type="submit" id="submit_first" class="btn btn-default" value="&laquo;"></form>
+							<form action="person.php" method="post"><input type="hidden" name="show" value="1"><input type="submit" id="submit_first" class="btn btn-default" value="&laquo;"></form>
 						</div>
 						<div class="col-sm-1">
-							<form action="person.php" method="post"><input type="hidden" name="user_id" value="<?php echo $user_id-1?>"><input type="submit" id="submit_prev" class="btn btn-default" value="Letzter"></form>
+							<form action="person.php" method="post"><input type="hidden" name="show" value="<?php echo $user_id-1?>"><input type="submit" id="submit_prev" class="btn btn-default" value="Letzter"></form>
 						</div>
 						<div class="col-sm-1">
-							<form action="person.php" method="post"><input type="hidden" name="user_id" value="<?php echo $user_id+1?>"><input type="submit" id="submit_next" class="btn btn-default" value="Nächster"></form>
+							<form action="person.php" method="post"><input type="hidden" name="show" value="<?php echo $user_id+1?>"><input type="submit" id="submit_next" class="btn btn-default" value="Nächster"></form>
 						</div>
 						<div class="col-sm-1">
-							<form action="person.php" method="post"><input type="hidden" name="user_id" value="<?php echo getMaxID("tab_person")?>"><input type="submit" id="submit_last" class="btn btn-default" value="&raquo;"></form>
+							<form action="person.php" method="post"><input type="hidden" name="show" value="<?php echo getMaxID("tab_person", "PersonNr")?>"><input type="submit" id="submit_last" class="btn btn-default" value="&raquo;"></form>
 						</div>
 					</div>
 				<?php
@@ -127,7 +122,7 @@
 			} else {
 				?>
                 <div class="alert alert-warning">
-                    <strong>Fehler:</strong> Kein Nutzer mit dieser ID gefunden!
+                    <strong>Fehler:</strong> Kein Nutzer mit dieser ID gefunden: <?php mysql_error();?>
                 </div>
 
                 <?php
@@ -144,18 +139,19 @@
 
 <?php
 
-function getMaxID($table){
+function getMaxID($table, $id){
 	$verbindung = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_DATENBANK);
 
 	if (!$verbindung) {
 		die(mysqli_connect_error());
 	}
-	$sql = "SELECT id FROM `". $table ."` WHERE id=(SELECT max(id) FROM ". $table .")";
+	// SELECT max(PersonNr) FROM tab_person
+	$sql = "SELECT max(".$id.") FROM `". $table ."`";
 	$ergebnis = mysqli_query($verbindung, $sql);
 	if (mysqli_num_rows($ergebnis) > 0) {
 		// output data of each row
 		$row = mysqli_fetch_assoc($ergebnis);
-		return $row["id"];
+		return $row["max(".$id.")"];
 	}
 	else{
 		return false;
